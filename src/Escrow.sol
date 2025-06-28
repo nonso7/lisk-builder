@@ -8,6 +8,8 @@ contract EscrowBuilder is IEscrowInterface {
 
     event EscrowDetails(address indexed seller, address indexed arbiter, address indexed buyer, uint256 id, string description);
     event FundSentToSeller(address indexed seller, uint256 amount);
+    event AcceptedBuyersDetails(address indexed seller, uint256 id);
+
     error WaitUntilYourDeadline();
     error YouAreNotOwner();
     error ContractPaused();
@@ -16,11 +18,11 @@ contract EscrowBuilder is IEscrowInterface {
     error RefundHasBeenAsked();
 
     uint256 public constant DEADLINE = 5 days;
-    uint256 EscrowId;
+    uint256 public EscrowId;
 
     address owner;
 
-    bool paused = false;
+    bool public paused = false;
     
     mapping(uint256 id => Escrow.EscrowDetails) public escrow;
     mapping(uint256 => mapping(address => bool) ) public buyerEscrowId;
@@ -48,21 +50,20 @@ contract EscrowBuilder is IEscrowInterface {
         paused = false;
     }
 
-    function createEscrow(address seller, address buyer,  address arbiter, uint256 amount, uint256 deadline, string memory description) external returns (uint256 escrowId) {
+    function createEscrow(address seller, address arbiter, uint256 amount, uint256 deadline, string memory description) external returns (uint256 escrowId) {
         if(paused) revert ContractPaused();
         require(msg.sender != address(0));
         require(seller != address(0) && arbiter != address(0));
         require(amount > 0);
-        require(deadline < DEADLINE);
 
         escrowId = EscrowId++;
 
         escrow[escrowId] = Escrow.EscrowDetails({
             seller: seller,
-            buyer: buyer,
+            buyer: msg.sender,
             arbiter: arbiter,
             amount: amount,
-            deadline: block.timestamp + 2 days,
+            deadline: deadline,
             description: description
         });
 
@@ -74,14 +75,16 @@ contract EscrowBuilder is IEscrowInterface {
     
     }
     
-    function acceptBuyerEscrowDetails(uint256 escrowId) external returns(bool) {
+    function acceptBuyerEscrowDetails(uint256 escrowId) external {
         if(paused) revert ContractPaused();
+        require(state[escrowId] == Escrow.EscrowState.Created, "Escrow Not Created Yet");
         require(msg.sender == escrow[escrowId].seller);
         state[escrowId] = Escrow.EscrowState.Accepted;
-        return true;
+        emit AcceptedBuyersDetails(msg.sender, escrowId);
     }
 
     function dispute(uint256 escrowId) external {
+        if(paused) revert ContractPaused();
         require(msg.sender == escrow[escrowId].seller);
         if(block.timestamp >= escrow[escrowId].deadline) {
             require(msg.sender == escrow[escrowId].buyer);

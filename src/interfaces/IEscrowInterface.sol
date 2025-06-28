@@ -5,7 +5,7 @@ import {Escrow} from "../types/EscrowDetails.sol";
 
 interface IEscrowInterface {
 
-    function createEscrow(address seller, address buyer, address arbiter, uint256 amount, uint256 deadline, string memory description) external returns (uint256 escrowId);
+    function createEscrow(address seller, address arbiter, uint256 amount, uint256 deadline, string memory description) external returns (uint256 escrowId);
 
     function fundEscrow(uint256 escrowId) external payable;
 
