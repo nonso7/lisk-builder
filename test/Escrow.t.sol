@@ -621,4 +621,162 @@ contract EscrowBuilderTest is Test {
         escrow.requestRefund(1);
         vm.stopPrank();
     }
+
+        function test_ResolveDisputeSuccessReleaseToSeller() public {
+        // Create, fund, and dispute escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+        vm.startPrank(seller);
+        escrow.dispute(escrowId);
+        vm.stopPrank();
+
+        // Resolve dispute (release to seller)
+        uint256 sellerBalanceBefore = seller.balance;
+        vm.startPrank(arbiter);
+        escrow.resolveDispute(escrowId, true);
+        (, , , uint256 _amount, , ) = escrow.escrow(escrowId);
+        assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.Resolved));
+        assertEq(_amount, 0);
+        assertEq(seller.balance, sellerBalanceBefore + 5 ether);
+        vm.stopPrank();
+    }
+
+        function test_ResolveDisputeSuccessRefundToBuyer() public {
+        // Create, fund, and dispute escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+        vm.startPrank(seller);
+        escrow.dispute(escrowId);
+        vm.stopPrank();
+
+        // Resolve dispute (refund to buyer)
+        uint256 buyerBalanceBefore = buyer.balance;
+        vm.startPrank(arbiter);
+        escrow.resolveDispute(escrowId, false);
+        (, , , uint256 _amount, , ) = escrow.escrow(escrowId);
+        assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.Resolved));
+        assertEq(_amount, 0);
+        assertEq(buyer.balance, buyerBalanceBefore + 5 ether);
+        vm.stopPrank();
+    }
+
+     function test_ResolveDisputeFailsWhenPaused() public {
+        // Create, fund, and dispute escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+        vm.startPrank(seller);
+        escrow.dispute(escrowId);
+        vm.stopPrank();
+
+        // Pause contract
+        vm.startPrank(owner);
+        escrow.pause();
+        vm.stopPrank();
+
+        // Try to resolve dispute
+        vm.startPrank(arbiter);
+        vm.expectRevert();
+        escrow.resolveDispute(escrowId, true);
+        vm.stopPrank();
+    }
+
+        function test_ResolveDisputeFailsNotArbiter() public {
+        // Create, fund, and dispute escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+        vm.startPrank(seller);
+        escrow.dispute(escrowId);
+        vm.stopPrank();
+
+        // Try to resolve as non-arbiter
+        vm.startPrank(buyer);
+        vm.expectRevert();
+        escrow.resolveDispute(escrowId, true);
+        vm.stopPrank();
+    }
+
+        function test_ResolveDisputeFailsNotInDispute() public {
+        // Create and fund escrow (not disputed)
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+
+        // Try to resolve
+        vm.startPrank(arbiter);
+        vm.expectRevert();
+        escrow.resolveDispute(escrowId, true);
+        vm.stopPrank();
+    }
+
+        function test_ResolveDisputeFailsNonExistentEscrow() public {
+        // Try to resolve non-existent escrow
+        vm.startPrank(arbiter);
+        vm.expectRevert(); // Reverts due to escrow[1].arbiter == address(0)
+        escrow.resolveDispute(1, true);
+        vm.stopPrank();
+    }
+    
+    function test_GetEscrowDetailsSuccess() public {
+        // Create escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test Escrow");
+        vm.stopPrank();
+
+        // Get escrow details
+        Escrow.EscrowDetails memory details = escrow.getEscrowDetails(escrowId);
+
+        // Verify details
+        assertEq(details.seller, seller);
+        assertEq(details.buyer, buyer);
+        assertEq(details.arbiter, arbiter);
+        assertEq(details.amount, 5 ether);
+        assertEq(details.deadline, block.timestamp + 2 days);
+        assertEq(details.description, "Test Escrow");
+    }
+
+        function test_GetEscrowDetailsNonExistentEscrow() public {
+        // Get details for non-existent escrow
+        Escrow.EscrowDetails memory details = escrow.getEscrowDetails(1);
+
+        // Verify default values
+        assertEq(details.seller, address(0));
+        assertEq(details.buyer, address(0));
+        assertEq(details.arbiter, address(0));
+        assertEq(details.amount, 0);
+        assertEq(details.deadline, 0);
+        assertEq(details.description, "");
+    }
+
+        function test_GetEscrowDetailsAfterFundsReleased() public {
+        // Create and fund escrow
+        vm.startPrank(buyer);
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test Escrow");
+        escrow.fundEscrow{value: 5 ether}(escrowId);
+        vm.stopPrank();
+
+        // Release funds
+        vm.startPrank(seller);
+        escrow.releaseFunds(escrowId);
+        vm.stopPrank();
+
+        // Get escrow details
+        Escrow.EscrowDetails memory details = escrow.getEscrowDetails(escrowId);
+
+        // Verify details (amount should be 0 after release)
+        assertEq(details.seller, seller);
+        assertEq(details.buyer, buyer);
+        assertEq(details.arbiter, arbiter);
+        assertEq(details.amount, 0);
+        assertEq(details.deadline, block.timestamp + 2 days);
+        assertEq(details.description, "Test Escrow");
+    }
 }

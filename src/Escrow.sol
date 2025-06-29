@@ -16,6 +16,7 @@ contract EscrowBuilder is IEscrowInterface {
     event AcceptedBuyersDetails(address indexed seller, uint256 id);
     event EscrowDisputed(address indexed disputer, uint256 id);
     event RefundRequested(address indexed buyer, uint256 id);
+    event DisputeResolved(address indexed arbiter, uint256 id, uint256 amount);
 
     error WaitUntilYourDeadline();
     error YouAreNotOwner();
@@ -29,6 +30,8 @@ contract EscrowBuilder is IEscrowInterface {
     error AlreadyDeposited();
     error ZeroValue();
     error InsufficientFunds();
+    error NotArbiter();
+    error NotInDispute();
 
     uint256 public constant DEADLINE = 5 days;
     uint256 public EscrowId;
@@ -152,21 +155,26 @@ contract EscrowBuilder is IEscrowInterface {
         emit RefundRequested(msg.sender, escrowId);
     }
 
-    function resolveDispute(uint256 escrowId, bool releaseFund) external {
-        require(escrow[escrowId].arbiter == msg.sender);
-        require(
-            state[escrowId] == Escrow.EscrowState.InDisput,
-            "They can sort themselves"
-        );
-        if (releaseFund) {
-            payable(escrow[escrowId].seller).transfer(escrow[escrowId].amount);
-        } else if (state[escrowId] == Escrow.EscrowState.Refund) {
-            uint256 amountToSendToBuyer = escrow[escrowId].amount;
-            escrow[escrowId].amount -= amountToSendToBuyer;
-            payable(escrow[escrowId].buyer).transfer(amountToSendToBuyer);
-        }
-        state[escrowId] == Escrow.EscrowState.Resolved;
+function resolveDispute(uint256 escrowId, bool releaseFund) external {
+    if (paused) revert ContractPaused();
+    if (escrow[escrowId].arbiter != msg.sender) revert NotArbiter();
+    if (state[escrowId] != Escrow.EscrowState.InDisput) revert NotInDispute();
+    if (escrow[escrowId].amount == 0) revert InsufficientFunds();
+
+    if (releaseFund) {
+        uint256 amountToSend = escrow[escrowId].amount;
+        escrow[escrowId].amount = 0;
+        (bool success, ) = payable(escrow[escrowId].seller).call{value: amountToSend}("");
+        require(success, "Transfer to seller failed");
+    } else {
+        uint256 amountToSend = escrow[escrowId].amount;
+        escrow[escrowId].amount = 0;
+        (bool success, ) = payable(escrow[escrowId].buyer).call{value: amountToSend}("");
+        require(success, "Transfer to buyer failed");
     }
+    state[escrowId] = Escrow.EscrowState.Resolved;
+    emit DisputeResolved(msg.sender, escrowId, escrow[escrowId].amount);
+}
 
     function getEscrowDetails(
         uint256 escrowId
