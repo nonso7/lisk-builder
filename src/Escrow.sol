@@ -6,11 +6,7 @@ import {Escrow} from "./types/EscrowDetails.sol";
 
 contract EscrowBuilder is IEscrowInterface {
     event EscrowDetails(
-        address indexed seller,
-        address indexed arbiter,
-        address indexed buyer,
-        uint256 id,
-        string description
+        address indexed seller, address indexed arbiter, address indexed buyer, uint256 id, string description
     );
     event FundSentToSeller(address indexed seller, uint256 amount);
     event AcceptedBuyersDetails(address indexed seller, uint256 id);
@@ -64,13 +60,10 @@ contract EscrowBuilder is IEscrowInterface {
         paused = false;
     }
 
-    function createEscrow(
-        address seller,
-        address arbiter,
-        uint256 amount,
-        uint256 deadline,
-        string memory description
-    ) external returns (uint256 escrowId) {
+    function createEscrow(address seller, address arbiter, uint256 amount, uint256 deadline, string memory description)
+        external
+        returns (uint256 escrowId)
+    {
         if (paused) revert ContractPaused();
         require(msg.sender != address(0));
         require(seller != address(0) && arbiter != address(0));
@@ -96,10 +89,7 @@ contract EscrowBuilder is IEscrowInterface {
 
     function acceptBuyerEscrowDetails(uint256 escrowId) external {
         if (paused) revert ContractPaused();
-        require(
-            state[escrowId] == Escrow.EscrowState.Created,
-            "Escrow Not Created Yet"
-        );
+        require(state[escrowId] == Escrow.EscrowState.Created, "Escrow Not Created Yet");
         require(msg.sender == escrow[escrowId].seller);
         state[escrowId] = Escrow.EscrowState.Accepted;
         emit AcceptedBuyersDetails(msg.sender, escrowId);
@@ -107,13 +97,12 @@ contract EscrowBuilder is IEscrowInterface {
 
     function dispute(uint256 escrowId) external {
         if (paused) revert ContractPaused();
-        if (state[escrowId] != Escrow.EscrowState.Created)
+        if (state[escrowId] != Escrow.EscrowState.Created) {
             revert EscrowNotCreated();
+        }
         if (
-            !(msg.sender == escrow[escrowId].seller &&
-                block.timestamp < escrow[escrowId].deadline) &&
-            !(msg.sender == escrow[escrowId].buyer &&
-                block.timestamp >= escrow[escrowId].deadline)
+            !(msg.sender == escrow[escrowId].seller && block.timestamp < escrow[escrowId].deadline)
+                && !(msg.sender == escrow[escrowId].buyer && block.timestamp >= escrow[escrowId].deadline)
         ) revert NotAuthorized();
         state[escrowId] = Escrow.EscrowState.InDisput;
         emit EscrowDisputed(msg.sender, escrowId);
@@ -131,10 +120,12 @@ contract EscrowBuilder is IEscrowInterface {
     //seller is the one who will call this function
     function releaseFunds(uint256 escrowId) external {
         if (paused) revert ContractPaused();
-        if (state[escrowId] == Escrow.EscrowState.InDisput)
+        if (state[escrowId] == Escrow.EscrowState.InDisput) {
             revert currentlyInDispute();
-        if (state[escrowId] == Escrow.EscrowState.Refund)
+        }
+        if (state[escrowId] == Escrow.EscrowState.Refund) {
             revert RefundHasBeenAsked();
+        }
         require(msg.sender == escrow[escrowId].seller);
         uint256 amountToSendToSeller = escrow[escrowId].amount;
         require(amountToSendToSeller > 0, "No funds to release");
@@ -149,36 +140,35 @@ contract EscrowBuilder is IEscrowInterface {
         if (paused) revert ContractPaused();
         if (!hasDeposited[msg.sender]) revert NotYetDeposited();
         if (!buyerEscrowId[escrowId][msg.sender]) revert NotEscrowBuyer();
-        if (block.timestamp < escrow[escrowId].deadline)
+        if (block.timestamp < escrow[escrowId].deadline) {
             revert WaitUntilYourDeadline();
+        }
         state[escrowId] = Escrow.EscrowState.Refund;
         emit RefundRequested(msg.sender, escrowId);
     }
 
-function resolveDispute(uint256 escrowId, bool releaseFund) external {
-    if (paused) revert ContractPaused();
-    if (escrow[escrowId].arbiter != msg.sender) revert NotArbiter();
-    if (state[escrowId] != Escrow.EscrowState.InDisput) revert NotInDispute();
-    if (escrow[escrowId].amount == 0) revert InsufficientFunds();
+    function resolveDispute(uint256 escrowId, bool releaseFund) external {
+        if (paused) revert ContractPaused();
+        if (escrow[escrowId].arbiter != msg.sender) revert NotArbiter();
+        if (state[escrowId] != Escrow.EscrowState.InDisput) revert NotInDispute();
+        if (escrow[escrowId].amount == 0) revert InsufficientFunds();
 
-    if (releaseFund) {
-        uint256 amountToSend = escrow[escrowId].amount;
-        escrow[escrowId].amount = 0;
-        (bool success, ) = payable(escrow[escrowId].seller).call{value: amountToSend}("");
-        require(success, "Transfer to seller failed");
-    } else {
-        uint256 amountToSend = escrow[escrowId].amount;
-        escrow[escrowId].amount = 0;
-        (bool success, ) = payable(escrow[escrowId].buyer).call{value: amountToSend}("");
-        require(success, "Transfer to buyer failed");
+        if (releaseFund) {
+            uint256 amountToSend = escrow[escrowId].amount;
+            escrow[escrowId].amount = 0;
+            (bool success,) = payable(escrow[escrowId].seller).call{value: amountToSend}("");
+            require(success, "Transfer to seller failed");
+        } else {
+            uint256 amountToSend = escrow[escrowId].amount;
+            escrow[escrowId].amount = 0;
+            (bool success,) = payable(escrow[escrowId].buyer).call{value: amountToSend}("");
+            require(success, "Transfer to buyer failed");
+        }
+        state[escrowId] = Escrow.EscrowState.Resolved;
+        emit DisputeResolved(msg.sender, escrowId, escrow[escrowId].amount);
     }
-    state[escrowId] = Escrow.EscrowState.Resolved;
-    emit DisputeResolved(msg.sender, escrowId, escrow[escrowId].amount);
-}
 
-    function getEscrowDetails(
-        uint256 escrowId
-    ) external view returns (Escrow.EscrowDetails memory) {
+    function getEscrowDetails(uint256 escrowId) external view returns (Escrow.EscrowDetails memory) {
         return escrow[escrowId];
     }
 }

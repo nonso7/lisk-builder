@@ -48,13 +48,7 @@ contract EscrowBuilderTest is Test {
     function test_createEscrowSuccess() public {
         vm.deal(buyer, 10 ether);
         vm.startPrank(buyer);
-        escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "I am interested"
-        );
+        escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "I am interested");
         uint256 escrowId = escrow.EscrowId();
         assertEq(escrowId, 1);
         vm.stopPrank();
@@ -63,26 +57,14 @@ contract EscrowBuilderTest is Test {
     function test_createEscrowMultiple() public {
         vm.deal(buyer, 10 ether);
         vm.startPrank(buyer);
-        escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "I am interested"
-        );
+        escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "I am interested");
         uint256 escrowId = escrow.EscrowId();
         assertEq(escrowId, 1);
         vm.stopPrank();
 
         vm.deal(buyer2, 10 ether);
         vm.startPrank(buyer2);
-        escrow.createEscrow(
-            seller2,
-            arbiter2,
-            3 ether,
-            block.timestamp,
-            "New-port"
-        );
+        escrow.createEscrow(seller2, arbiter2, 3 ether, block.timestamp, "New-port");
         uint256 escrowId2 = escrow.EscrowId();
         assertEq(escrowId2, 2);
         vm.stopPrank();
@@ -94,50 +76,26 @@ contract EscrowBuilderTest is Test {
         vm.stopPrank();
 
         vm.expectRevert();
-        escrow.createEscrow(
-            seller2,
-            arbiter2,
-            3 ether,
-            block.timestamp,
-            "New-port"
-        );
+        escrow.createEscrow(seller2, arbiter2, 3 ether, block.timestamp, "New-port");
     }
 
     function test_createEscrowFailsWhenCalledByZeroAddress() public {
         address ZERO_ADDRESS = address(0);
         vm.startPrank(ZERO_ADDRESS);
         vm.expectRevert();
-        escrow.createEscrow(
-            seller2,
-            arbiter2,
-            3 ether,
-            block.timestamp,
-            "New-port"
-        );
+        escrow.createEscrow(seller2, arbiter2, 3 ether, block.timestamp, "New-port");
     }
 
     function test_createEscrowCreated() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller2,
-            arbiter2,
-            3 ether,
-            block.timestamp,
-            "New-port"
-        );
+        uint256 escrowId = escrow.createEscrow(seller2, arbiter2, 3 ether, block.timestamp, "New-port");
         Escrow.EscrowState created = escrow.state(escrowId);
         assertEq(uint256(created), uint256(Escrow.EscrowState.Created));
     }
 
     function test_createEscrowBuyerIdIsSetTotrue() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller2,
-            arbiter2,
-            3 ether,
-            block.timestamp,
-            "New-port"
-        );
+        uint256 escrowId = escrow.createEscrow(seller2, arbiter2, 3 ether, block.timestamp, "New-port");
         bool id = escrow.buyerEscrowId(escrowId, buyer);
         assertTrue(id);
         vm.stopPrank();
@@ -145,13 +103,7 @@ contract EscrowBuilderTest is Test {
 
     function test_acceptBuyerEscrowDetailsSuccess() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "I am interested"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "I am interested");
         vm.stopPrank();
 
         vm.startPrank(seller);
@@ -163,13 +115,7 @@ contract EscrowBuilderTest is Test {
 
     function test_acceptBuyerEscrowDetailsNotSellerAsCaller() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "I am interested"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "I am interested");
         vm.stopPrank();
 
         vm.startPrank(buyer);
@@ -198,33 +144,18 @@ contract EscrowBuilderTest is Test {
 
     function test_DisputeSuccessBySeller() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(seller);
         escrow.dispute(escrowId);
-        assertEq(
-            uint256(escrow.state(escrowId)),
-            uint256(Escrow.EscrowState.InDisput)
-        );
+        assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.InDisput));
         vm.stopPrank();
     }
 
     function test_DisputeSuccessByBuyerAfterDeadline() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp,
-            "I am interested"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp, "I am interested");
         vm.stopPrank();
 
         vm.warp(block.timestamp + 1);
@@ -237,13 +168,7 @@ contract EscrowBuilderTest is Test {
 
     function test_DisputeFailsNotAuthorized() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(arbiter);
@@ -261,13 +186,7 @@ contract EscrowBuilderTest is Test {
 
     function test_DisputeFailsWhenPaused() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(owner);
@@ -282,13 +201,7 @@ contract EscrowBuilderTest is Test {
 
     function test_FundEscrowSuccess() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(buyer);
@@ -301,13 +214,7 @@ contract EscrowBuilderTest is Test {
     function test_FundEscrowFailsWhenPaused() public {
         // Create escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(owner);
@@ -323,13 +230,7 @@ contract EscrowBuilderTest is Test {
     function test_FundEscrowFailsNotEscrowBuyer() public {
         // Create escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(buyer2);
@@ -341,13 +242,7 @@ contract EscrowBuilderTest is Test {
     function test_FundEscrowFailsAlreadyDeposited() public {
         // Create escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId); // First deposit
         vm.stopPrank();
 
@@ -361,13 +256,7 @@ contract EscrowBuilderTest is Test {
     function test_FundEscrowFailsZeroValue() public {
         // Create escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         // Try to fund with 0 Ether
@@ -379,13 +268,7 @@ contract EscrowBuilderTest is Test {
 
     function test_FundEscrowFailsInsufficientFunds() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         vm.stopPrank();
 
         vm.startPrank(buyer);
@@ -404,13 +287,7 @@ contract EscrowBuilderTest is Test {
     function test_ReleaseFundsSuccess() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -419,7 +296,7 @@ contract EscrowBuilderTest is Test {
         vm.startPrank(seller);
 
         escrow.releaseFunds(escrowId);
-        (, , , uint256 _amount, , ) = escrow.escrow(escrowId);
+        (,,, uint256 _amount,,) = escrow.escrow(escrowId);
         assertEq(_amount, 0);
         assertEq(seller.balance, sellerBalanceBefore + 5 ether);
         vm.stopPrank();
@@ -428,13 +305,7 @@ contract EscrowBuilderTest is Test {
     function test_ReleaseFundsFailsWhenPaused() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -453,13 +324,7 @@ contract EscrowBuilderTest is Test {
     function test_ReleaseFundsFailsInDispute() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -478,13 +343,7 @@ contract EscrowBuilderTest is Test {
     function test_ReleaseFundsFailsNotSeller() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -506,13 +365,7 @@ contract EscrowBuilderTest is Test {
     function test_RequestRefundSuccess() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -522,23 +375,14 @@ contract EscrowBuilderTest is Test {
         // Request refund
         vm.startPrank(buyer);
         escrow.requestRefund(escrowId);
-        assertEq(
-            uint256(escrow.state(escrowId)),
-            uint256(Escrow.EscrowState.Refund)
-        );
+        assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.Refund));
         vm.stopPrank();
     }
 
     function test_RequestRefundFailsWhenPaused() public {
         // Create and fund escrow
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -557,13 +401,7 @@ contract EscrowBuilderTest is Test {
     function test_RequestRefundFailsNotYetDeposited() public {
         // Create escrow but don’t fund
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp, "Test");
         vm.stopPrank();
 
         // Advance time to after deadline
@@ -578,17 +416,10 @@ contract EscrowBuilderTest is Test {
 
     function test_RequestRefundFailsNotEscrowBuyer() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
-        
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(buyer2);
@@ -599,13 +430,7 @@ contract EscrowBuilderTest is Test {
 
     function test_RequestRefundFailsBeforeDeadline() public {
         vm.startPrank(buyer);
-        uint256 escrowId = escrow.createEscrow(
-            seller,
-            arbiter,
-            5 ether,
-            block.timestamp + 2 days,
-            "Test"
-        );
+        uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
         escrow.fundEscrow{value: 5 ether}(escrowId);
         vm.stopPrank();
 
@@ -617,12 +442,12 @@ contract EscrowBuilderTest is Test {
 
     function test_RequestRefundFailsNonExistentEscrow() public {
         vm.startPrank(buyer);
-        vm.expectRevert(); 
+        vm.expectRevert();
         escrow.requestRefund(1);
         vm.stopPrank();
     }
 
-        function test_ResolveDisputeSuccessReleaseToSeller() public {
+    function test_ResolveDisputeSuccessReleaseToSeller() public {
         // Create, fund, and dispute escrow
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
@@ -636,14 +461,14 @@ contract EscrowBuilderTest is Test {
         uint256 sellerBalanceBefore = seller.balance;
         vm.startPrank(arbiter);
         escrow.resolveDispute(escrowId, true);
-        (, , , uint256 _amount, , ) = escrow.escrow(escrowId);
+        (,,, uint256 _amount,,) = escrow.escrow(escrowId);
         assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.Resolved));
         assertEq(_amount, 0);
         assertEq(seller.balance, sellerBalanceBefore + 5 ether);
         vm.stopPrank();
     }
 
-        function test_ResolveDisputeSuccessRefundToBuyer() public {
+    function test_ResolveDisputeSuccessRefundToBuyer() public {
         // Create, fund, and dispute escrow
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
@@ -657,14 +482,14 @@ contract EscrowBuilderTest is Test {
         uint256 buyerBalanceBefore = buyer.balance;
         vm.startPrank(arbiter);
         escrow.resolveDispute(escrowId, false);
-        (, , , uint256 _amount, , ) = escrow.escrow(escrowId);
+        (,,, uint256 _amount,,) = escrow.escrow(escrowId);
         assertEq(uint256(escrow.state(escrowId)), uint256(Escrow.EscrowState.Resolved));
         assertEq(_amount, 0);
         assertEq(buyer.balance, buyerBalanceBefore + 5 ether);
         vm.stopPrank();
     }
 
-     function test_ResolveDisputeFailsWhenPaused() public {
+    function test_ResolveDisputeFailsWhenPaused() public {
         // Create, fund, and dispute escrow
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
@@ -686,7 +511,7 @@ contract EscrowBuilderTest is Test {
         vm.stopPrank();
     }
 
-        function test_ResolveDisputeFailsNotArbiter() public {
+    function test_ResolveDisputeFailsNotArbiter() public {
         // Create, fund, and dispute escrow
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
@@ -703,7 +528,7 @@ contract EscrowBuilderTest is Test {
         vm.stopPrank();
     }
 
-        function test_ResolveDisputeFailsNotInDispute() public {
+    function test_ResolveDisputeFailsNotInDispute() public {
         // Create and fund escrow (not disputed)
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test");
@@ -717,14 +542,14 @@ contract EscrowBuilderTest is Test {
         vm.stopPrank();
     }
 
-        function test_ResolveDisputeFailsNonExistentEscrow() public {
+    function test_ResolveDisputeFailsNonExistentEscrow() public {
         // Try to resolve non-existent escrow
         vm.startPrank(arbiter);
         vm.expectRevert(); // Reverts due to escrow[1].arbiter == address(0)
         escrow.resolveDispute(1, true);
         vm.stopPrank();
     }
-    
+
     function test_GetEscrowDetailsSuccess() public {
         // Create escrow
         vm.startPrank(buyer);
@@ -743,7 +568,7 @@ contract EscrowBuilderTest is Test {
         assertEq(details.description, "Test Escrow");
     }
 
-        function test_GetEscrowDetailsNonExistentEscrow() public {
+    function test_GetEscrowDetailsNonExistentEscrow() public {
         // Get details for non-existent escrow
         Escrow.EscrowDetails memory details = escrow.getEscrowDetails(1);
 
@@ -756,7 +581,7 @@ contract EscrowBuilderTest is Test {
         assertEq(details.description, "");
     }
 
-        function test_GetEscrowDetailsAfterFundsReleased() public {
+    function test_GetEscrowDetailsAfterFundsReleased() public {
         // Create and fund escrow
         vm.startPrank(buyer);
         uint256 escrowId = escrow.createEscrow(seller, arbiter, 5 ether, block.timestamp + 2 days, "Test Escrow");

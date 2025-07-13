@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 library Escrow {
-    struct EscrowDetails{
+    struct EscrowDetails {
         address seller;
         address buyer;
         address arbiter;
@@ -12,10 +12,10 @@ library Escrow {
     }
 
     enum EscrowState {
-       Accepted,
-       InDisput,
-       Created,
-       Refund,
-       Resolved
+        Accepted,
+        InDisput,
+        Created,
+        Refund,
+        Resolved
     }
 }
